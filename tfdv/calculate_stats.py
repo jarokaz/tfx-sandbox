@@ -43,40 +43,48 @@ import re
 from typing import List, Optional, Text, Union, Dict, Iterable
 
 import apache_beam as beam
-from apache_beam.io import ReadFromText
-from apache_beam.io import WriteToText
-from apache_beam.metrics import Metrics
+import pyarrow as pa
+import tensorflow_data_validation as tfdv
+
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.options.pipeline_options import SetupOptions
-from apache_beam.testing.util import assert_that
-from apache_beam.testing.util import equal_to
-
-import pyarrow as pa
-
-import tensorflow_data_validation as tfdv
+from google.cloud import bigquery
+from tensorflow_data_validation import constants
+from tensorflow_data_validation import types
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
 from jinja2 import Template
 
 
-class BatchedDictsToRecordBatch(beam.DoFn):
-    """DoFn to convert a batch of dictionaries to a pyarrow.RecordBatch.
-  
-    In the current implementation, the function relies on automatic
-    coercion to pyarrow data types. 
-    To be verified whether this is a right approach.
-    """
+# BigQuery to Arrow type mappings
+_BQ_TO_ARROW = {
+    'STRING': pa.list_(pa.binary()),
+    'INTEGER': pa.list_(pa.int64()),
+    'FLOAT': pa.list_(pa.float32()),
+    'BOOLEAN': pa.list_(pa.int64())
+}
 
-    def process(self, batch: List[Dict]) -> Iterable[pa.Table]:
+
+class BatchedDictsToTable(beam.DoFn):
+    """DoFn to convert a batch of dictionaries to a pyarrow.Table."""
+
+    def process(self, batch: List[Dict], 
+                column_specs: Dict) -> Iterable[pa.Table]:
         
         column_names = batch[0].keys()
+        # Check that the batch conforms to schema
+        if set(column_names) != set(column_specs.keys()):
+            raise ValueError("Columns in a batch don't match required column specs")
+        
         values_by_column = {column_name: [] for column_name in column_names}
+        
         for row in batch:
             for key, value in row.items():
                 values_by_column[key].append(value)
-                
+        
         arrow_arrays = [
-            pa.array(arr) for arr in values_by_column.values()
+            pa.array([arr], type=_BQ_TO_ARROW[column_specs[column_name]]) 
+            for column_name, arr in values_by_column.items()
             ]  
         
         yield pa.Table.from_arrays(arrow_arrays, list(column_names))
@@ -85,75 +93,77 @@ class DecodeBigQuery(beam.PTransform):
     """Decodes BigQuery records into Arrow RecordBatches."""
     def __init__(
         self,
-        column_names: List):
+        column_specs: Dict):
     
-        if not isinstance(column_names, list):
-            raise TypeError('column_names is of type %s, should be a list' %
-                            type(column_names).__name__)
-        self._column_names = column_names
+        self._column_specs = column_specs
     
     def expand(self, pcoll):
         record_batches = (
             pcoll
-            | beam.Map(lambda row: {field: row[field]
-                                    for field in self._column_names})
             | beam.BatchElements()
             | beam.ParDo(
-                BatchedDictsToRecordBatch())
+                BatchedDictsToTable(), self._column_specs)
             )
 
         return record_batches
 
-def generate_sampling_query(source_table_name, num_lots, lots):
-  """Prepares the data sampling query."""
 
-  sampling_query_template = """
+def _get_column_specs(query) -> Dict:
+    """Gets column specs for data returned by a BQ query."""
+    
+    client = bigquery.Client()
+    
+    query_job = client.query('SELECT * FROM ({}) LIMIT 0'.format(query))
+    results = query_job.result()
+    column_specs = {field.name: field.field_type for field in results.schema}
+    
+    return column_specs
+
+
+query = """
        SELECT *
        FROM 
-           `{{ source_table }}` AS cover
-       WHERE 
-       MOD(ABS(FARM_FINGERPRINT(TO_JSON_STRING(cover))), {{ num_lots }}) IN ({{ lots }})
+           `mlops-dev-env.covertype_dataset.covertype` 
        """
-  query = Template(sampling_query_template).render(
-      source_table=source_table_name, num_lots=num_lots, lots=str(lots)[1:-1])
-
-  return query
-
 
 def run(argv=None, save_main_session=True):
-  """Runs the TFDV pipeline."""
+    """Runs the TFDV pipeline."""
 
-  parser = argparse.ArgumentParser()
-  parser.add_argument(
-      '--input',
-      dest='input',
-      default='gs://dataflow-samples/shakespeare/kinglear.txt',
-      help='Input file to process.')
-  parser.add_argument(
-      '--output',
-      dest='output',
-      help='Output file to write results to.',
-      default = '/home/jarekk/tfdv_out/stats')
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--input',
+        dest='input',
+        default='gs://dataflow-samples/shakespeare/kinglear.txt',
+        help='Input file to process.')
+    parser.add_argument(
+        '--output',
+        dest='output',
+        help='Output file to write results to.',
+        default = '/home/jupyter/artifact_store/stats')
 
-  known_args, pipeline_args = parser.parse_known_args(argv)
+    known_args, pipeline_args = parser.parse_known_args(argv)
 
-  source_table_name = 'mlops-dev-env.covertype_dataset.covertype'
-  num_lots = 100
-  lots = [1]
-  query = generate_sampling_query(source_table_name, num_lots, lots)
-
-  pipeline_options = PipelineOptions(pipeline_args)
-  with beam.Pipeline(options=pipeline_options) as p:
-
-    pyarrow_records = ( p
-        | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-        | 'DecodeData' >>  DecodeBigQuery(['Elevation', 'Aspect'])
-        | 'GenerateStatistics' >> tfdv.GenerateStatistics()
-        | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
-              file_path_prefix = known_args.output,
-              shard_name_template='',
-              coder=beam.coders.ProtoCoder(
-              statistics_pb2.DatasetFeatureStatisticsList)))
+    #source_table_name = 'mlops-dev-env.covertype_dataset.covertype'
+    #num_lots = 100
+    #lots = [1]
+    #query = _generate_sampling_query(source_table_name, num_lots, lots)
+    
+    column_specs = _get_column_specs(query)
+    
+    if not set(column_specs.values()).issubset(_BQ_TO_ARROW.keys()):
+        raise ValueError("Unsupported BigQuery data types.")
+  
+    pipeline_options = PipelineOptions(pipeline_args)
+    with beam.Pipeline(options=pipeline_options) as p:
+        pyarrow_records = ( p
+            | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
+            | 'DecodeData' >>  DecodeBigQuery(column_specs)
+            | 'GenerateStatistics' >> tfdv.GenerateStatistics()
+            | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
+                file_path_prefix = known_args.output,
+                shard_name_template='',
+                coder=beam.coders.ProtoCoder(
+                statistics_pb2.DatasetFeatureStatisticsList)))
 
 
 
@@ -165,5 +175,5 @@ if __name__ == '__main__':
   #
   # You can set the default logging level to a different level when running
   # locally.
-  logging.getLogger().setLevel(logging.INFO)
-  run()
+    logging.getLogger().setLevel(logging.INFO)
+    run()

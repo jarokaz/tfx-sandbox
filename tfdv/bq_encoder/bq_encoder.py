@@ -32,12 +32,13 @@ _BQ_TO_ARROW = {
 }
 
 def validate_bq_types(types: List[Text]) -> bool:
-    """Validates whether a BQ type is supported by DecodeBigQuery transform."""
+    """Validates whether a set of BQ type is supported by DecodeBigQuery transform."""
     
     return set(types).issubset(_BQ_TO_ARROW.keys())
 
-class BatchedDictsToTable(beam.DoFn):
-    """DoFn to convert a batch of dictionaries to a pyarrow.Table."""
+class RecordsToTable(beam.DoFn):
+    """DoFn to convert a batch of records from beam.io.BigQuerySource
+    to a pyarrow.Table."""
 
     def process(self, batch: List[Mapping], 
                 column_specs: Mapping) -> Iterable[pyarrow.Table]:
@@ -80,7 +81,7 @@ class DecodeBigQuery(beam.PTransform):
                   min_batch_size = self._desired_batch_size,
                   max_batch_size = self._desired_batch_size)
             | beam.ParDo(
-                  BatchedDictsToTable(), self._column_specs)
+                  RecordsToTable(), self._column_specs)
             )
 
         return record_batches

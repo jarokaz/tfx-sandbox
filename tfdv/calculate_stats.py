@@ -50,8 +50,9 @@ from apache_beam.options.pipeline_options import GoogleCloudOptions
 from apache_beam.runners import DataflowRunner
 from apache_beam.runners import DirectRunner
 
-from google.cloud import bigquery
+from google.protobuf import text_format
 from tensorflow_data_validation.statistics import stats_options
+from tensorflow_data_validation.utils import io_util
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
 from utils.gen_stats import generate_statistics_from_bq
@@ -69,15 +70,20 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '--stats_file_path',
-        dest='stats_file_path',
-        help='The path to the Stats file',
-        default = 'gs://hostedkfp-default-36un4wco1q/tfdv/stats/stats.pb')
+        '--output_path',
+        dest='output_path',
+        help='Output path',
+        default = 'gs://hostedkfp-default-36un4wco1q/tfdv')
     parser.add_argument(
         '--dataflow_gcs_location',
         dest='dataflow_gcs_location',
         help='A GCS root for Dataflow staging and temp locations.',
         default = 'gs://hostedkfp-default-36un4wco1q/dataflow')
+    parser.add_argument(
+        '--schema_file',
+        dest='schema_file',
+        help='A path to a schema file',
+        default = 'schema.pbtxt')
 
     known_args, pipeline_args = parser.parse_known_args()
     
@@ -86,6 +92,7 @@ if __name__ == '__main__':
     pipeline_options.view_as(GoogleCloudOptions).temp_location = '%s/temp' % known_args.dataflow_gcs_location
     
     stats_options = stats_options.StatsOptions()
+    schema = tfdv.load_schema_text(known_args.schema_file)
     
     query = """
        SELECT *
@@ -95,6 +102,7 @@ if __name__ == '__main__':
     
     _ = generate_statistics_from_bq(
             query,
-            output_path=known_args.stats_file_path,
+            output_path=known_args.output_path,
+            schema=schema, 
             stats_options=stats_options,
             pipeline_options=pipeline_options)

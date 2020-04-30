@@ -16,21 +16,25 @@
 #
 """A utility function to generate statistics from BigQuery query"""
 
-
+import os
 import logging
 from typing import List, Optional, Text, Union, Dict, Iterable
 
 import apache_beam as beam
 import tensorflow_data_validation as tfdv
 
-from apache_beam.options.pipeline_options import PipelineOptions
-
 from google.cloud import bigquery
+from apache_beam.options.pipeline_options import PipelineOptions
 from tensorflow_data_validation.statistics import stats_options
+
 from tensorflow_metadata.proto.v0 import statistics_pb2
+from tensorflow_metadata.proto.v0 import schema_pb2
 
 from bq_encoder.bq_encoder import DecodeBigQuery
 from bq_encoder.bq_encoder import validate_bq_types
+
+_STATS_FILENAME='stats.pb'
+_ANOMALIES_FILENAME='anomalies.pbtxt'
 
 def _get_column_specs(query) -> Dict:
     """Gets column specs for a result a BQ query."""
@@ -46,18 +50,20 @@ def _get_column_specs(query) -> Dict:
 def generate_statistics_from_bq(
         query: Text,
         output_path: Text,
+        schema: schema_pb2.Schema,
         stats_options: stats_options.StatsOptions = stats_options.StatsOptions(),
-        pipeline_options: Optional[PipelineOptions] = None,
+        pipeline_options: Optional[PipelineOptions] = None,       
 ) -> statistics_pb2.DatasetFeatureStatisticsList:
     """Computes data statistics from a BigQuery query result.
   
     Args:
       query: The BigQuery query.
-      output_path: The file path to output data statistics result to. If None, we
-        use a temporary directory. It will be a TFRecord file containing a single
+      output_path: The file path to output data statistics result to. 
+        It will be a TFRecord file containing a single
         data statistics proto, and can be read with the 'load_statistics' API.
         If you run this function on Google Cloud, you must specify an
-      output_path. Specifying None may cause an error.
+        output_path. Specifying None may cause an error.
+      schema: A Schema protobuf to use for data validation
       stats_options: `tfdv.StatsOptions` for generating data statistics.
       pipeline_options: Optional beam pipeline options. This allows users to
         specify various beam pipeline execution parameters like pipeline runner
@@ -78,19 +84,30 @@ def generate_statistics_from_bq(
             tfdv.constants.DEFAULT_DESIRED_INPUT_BATCH_SIZE)
     # PyLint doesn't understand Beam PTransforms.
     # pylint: disable=no-value-for-parameter
+    
+    stats_output_path = os.path.join(output_path, _STATS_FILENAME)
+    anomalies_output_path = os.path.join(output_path, _ANOMALIES_FILENAME)
  
     with beam.Pipeline(options=pipeline_options) as p:
-        _ = ( p
+        stats = ( p
             | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
             | 'DecodeData' >>  DecodeBigQuery(column_specs,
                                               desired_batch_size=batch_size)
-            | 'GenerateStatistics' >> tfdv.GenerateStatistics()
+            | 'GenerateStatistics' >> tfdv.GenerateStatistics())
+        
+        _ = (stats       
             | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
-                  file_path_prefix=output_path,
+                  file_path_prefix=stats_output_path,
                   shard_name_template='',
                   coder=beam.coders.ProtoCoder(
                       statistics_pb2.DatasetFeatureStatisticsList)))
+        _ = (stats
+            | 'ValidateStatistics' >> beam.Map(tfdv.validate_statistics, schema=schema)
+            | 'WriteAnomaliesOutput' >> beam.io.textio.WriteToText(
+                                            file_path_prefix=anomalies_output_path,
+                                            shard_name_template='',
+                                            append_trailing_newlines=False))
         
 
-    return tfdv.load_statistics(output_path)
+    
 

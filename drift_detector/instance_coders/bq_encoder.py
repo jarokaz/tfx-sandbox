@@ -52,12 +52,13 @@ class RecordsToTable(beam.DoFn):
         
         for row in batch:
             for key, value in row.items():
-                values_by_column[key].append((value,))
+                values_by_column[key].append([value])
                 
         # TODO: Validate whether pa.array should receive a list of one large
         # sublist or a set of one element sublists
         arrow_arrays = [
-            pyarrow.array(arr, type=_BQ_TO_ARROW[column_specs[column_name]]) 
+            #pyarrow.array(arr, type=_BQ_TO_ARROW[column_specs[column_name]]) 
+            pyarrow.array(arr) 
             for column_name, arr in values_by_column.items()
             ]  
         

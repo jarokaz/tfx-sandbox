@@ -30,8 +30,8 @@ from tensorflow_data_validation.statistics import stats_options
 from tensorflow_metadata.proto.v0 import statistics_pb2
 from tensorflow_metadata.proto.v0 import schema_pb2
 
-from bq_encoder.bq_encoder import DecodeBigQuery
-from bq_encoder.bq_encoder import validate_bq_types
+from coders.bq_encoder import DecodeBigQuery
+from coders.bq_encoder import validate_bq_types
 
 _STATS_FILENAME='stats.pb'
 _ANOMALIES_FILENAME='anomalies.pbtxt'

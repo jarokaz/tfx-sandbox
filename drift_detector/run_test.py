@@ -28,7 +28,7 @@ import os
 from typing import List, Optional, Text, Union, Dict, Iterable
 
 import apache_beam as beam
-import pyarrow 
+import pyarrow as pa
 import tensorflow_data_validation as tfdv
 
 from apache_beam.options.pipeline_options import PipelineOptions
@@ -40,11 +40,16 @@ from apache_beam.runners import DirectRunner
 from google.protobuf import text_format
 from tensorflow_data_validation.statistics import stats_options
 from tensorflow_data_validation.utils import io_util
+from tensorflow_data_validation.utils import batch_util
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
 #from utils.gen_stats import generate_statistics_from_bq
 
 
+
+from coders.beam_example_coder import InstanceToBeamExample
+        
+        
 if __name__ == '__main__':
     # Cloud Logging would contain only logging.INFO and higher level logs logged
     # by the root logger. All log statements emitted by the root logger will be
@@ -85,20 +90,47 @@ if __name__ == '__main__':
     anomalies_output_path = os.path.join(
         known_args.output_path, 'test.txt'
     )
+    stats_output_path = os.path.join(
+        known_args.output_path, 'stats.pb'
+    )
     
-    instances = [
-        [1, 0.1, 'aaa'],
-        [2, 0.2, 'bbb']
-    ]
+    query = """
+       SELECT *
+       FROM 
+           `mlops-dev-env.data_validation.sklearn_covertype_classifier_logs` 
+       LIMIT 2
+       """
     
+    query1 = """
+       SELECT *
+       FROM 
+           `mlops-dev-env.covertype_dataset.covertype` 
+       LIMIT 2
+       """
+
     with beam.Pipeline(options=pipeline_options) as p:
         stats = ( p
-            | 'GetData' >> beam.io.Create(instances))
+            | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
+            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample())
+ #           | 'BeamExamplesToArrowTables' >> batch_util.BatchExamplesToArrowTables()
+ #           | 'GenerateStatistics' >> tfdv.GenerateStatistics())
+            | 'WriteOutputTest' >> beam.io.textio.WriteToText(
+                                           file_path_prefix=anomalies_output_path,
+                                           shard_name_template='',
+                                           append_trailing_newlines=True))
+        
+        
+ #       _ = (stats       
+ #           | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
+ #                 file_path_prefix=stats_output_path,
+ #                 shard_name_template='',
+ #                 coder=beam.coders.ProtoCoder(
+ #                     statistics_pb2.DatasetFeatureStatisticsList)))
    
-        _ = (stats
+       # _ = (stats
             #| 'ValidateStatistics' >> beam.Map(tfdv.validate_statistics, schema=schema)
-            | 'WriteAnomaliesOutput' >> beam.io.textio.WriteToText(
-                                            file_path_prefix=anomalies_output_path,
-                                            shard_name_template='',
-                                            append_trailing_newlines=False))
+        #    | 'WriteAnomaliesOutput' >> beam.io.textio.WriteToText(
+          #                                  file_path_prefix=anomalies_output_path,
+         #                                   shard_name_template='',
+           #                                 append_trailing_newlines=True))
         

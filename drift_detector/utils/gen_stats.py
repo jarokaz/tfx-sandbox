@@ -26,6 +26,7 @@ import tensorflow_data_validation as tfdv
 from google.cloud import bigquery
 from apache_beam.options.pipeline_options import PipelineOptions
 from tensorflow_data_validation.statistics import stats_options
+from tensorflow_data_validation.utils import batch_util
 
 from tensorflow_metadata.proto.v0 import statistics_pb2
 from tensorflow_metadata.proto.v0 import schema_pb2
@@ -91,8 +92,9 @@ def generate_statistics_from_bq(
     with beam.Pipeline(options=pipeline_options) as p:
         stats = ( p
             | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-            | 'DecodeData' >>  DecodeBigQuery(column_specs,
-                                              desired_batch_size=batch_size)
+    #        | 'DecodeData' >>  DecodeBigQuery(column_specs,
+    #                                          desired_batch_size=batch_size)
+            | 'DecodeExamples' >> batch_util.BatchExamplesToArrowTables()
             | 'GenerateStatistics' >> tfdv.GenerateStatistics())
         
         _ = (stats       

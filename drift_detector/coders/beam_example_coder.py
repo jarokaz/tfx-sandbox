@@ -21,6 +21,7 @@ request-response log into tfdv.types.BeamExample.
 
 import json
 import apache_beam as beam
+import numpy as np
 import tensorflow_data_validation as tfdv
 
 from typing import List, Optional, Text, Union, Dict, Iterable, Mapping
@@ -29,13 +30,14 @@ from tensorflow_data_validation import constants
 
 
 _RAW_DATA_COLUMN = 'raw_data'
+_INSTANCES_KEY = 'instances'
 _LOGGING_TABLE_SCHEMA = {
-    'model': lambda x: type(x) is str,
-    'model_version': lambda x: type(x) is str,
-    'time': lambda x: lambda x: type(x) is str,
-    'raw_data': lambda x: type(x) is str, 
-    'raw_prediction': lambda x: type(x) is str,
-    'groundtruth': lambda x: type(x) is str
+  'model': lambda x: type(x) is str,
+  'model_version': lambda x: type(x) is str,
+  'time': lambda x: lambda x: type(x) is str,
+  'raw_data': lambda x: type(x) is str, 
+  'raw_prediction': lambda x: type(x) is str,
+  'groundtruth': lambda x: type(x) is str
 }
 
 LOG_RECORD = Dict
@@ -45,32 +47,52 @@ LOG_RECORD = Dict
 class InstanceToBeamExample(beam.DoFn):
   """A DoFn which converts a JSON string to types.BeamExample."""
 
-  def __init__(self):
+  def __init__(self, feature_names=None):
     self._example_size = beam.metrics.Metrics.counter(
-        constants.METRICS_NAMESPACE, "example_size")
-
-            
+      constants.METRICS_NAMESPACE, "example_size")
+    
+    self._feature_names = feature_names
+    print("in constructor: %s" % self._feature_names)
+      
 
   def process(self, log_record: LOG_RECORD): #-> Iterable[types.BeamExample]:
-      #if bq_record:
-      #  self._example_size.inc(sum(map(len, batch)))
+    #if bq_record:
+    #  self._example_size.inc(sum(map(len, batch)))
     
-      incorrect_columns = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
-      if bool(incorrect_columns):
-          raise TypeError("Received log record with incorrect columns %s" %
-                          incorrect_columns)
+    incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
+    if bool(incorrect_features):
+      raise TypeError("Received log record with incorrect features %s" %
+                       features_columns)
        
-      columns_with_wrong_type = [key for key, value in log_record.items() 
-                    if not _LOGGING_TABLE_SCHEMA[key](value)]
-      if not bool(columns_with_wrong_type):
-          raise TypeError("Received log record with incorrect column types %s" %
-                          columns_with_wrong_type)
+    features_with_wrong_type = [key for key, value in log_record.items() 
+                                if not _LOGGING_TABLE_SCHEMA[key](value)]
+    if not bool(features_with_wrong_type):
+      raise TypeError("Received log record with incorrect feature types %s" %
+                       features_with_wrong_type)
     
-      raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
+    raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
+    if type(raw_data[_INSTANCES_KEY][0]) is dict:
+      for instance in raw_data[_INSTANCES_KEY]:
+        for key, value in instance.items():
+          instance[key] = np.array(value)
+        yield instance
+            
+    elif type(raw_data[_INSTANCES_KEY][0]) is list:
+      if not self._feature_names:
+        raise TypeError("Feature names are required for instances in a simple list format.")
+    
+      if len(self._feature_names) != len(raw_data[_INSTANCES_KEY][0]):
+        raise TypeError("The provided feature list does not match the length of an instance.")
+                
+      for instance in raw_data[_INSTANCES_KEY]:
+        yield {name: np.array(value) 
+          for name, value in zip(self._feature_names, instance)}
+            
+    else:
+      raise TypeError("Unsupported instance type.")
+      
     
     
-      for instance in raw_data['instances']:
-          yield instance
 
     
 

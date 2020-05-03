@@ -108,12 +108,28 @@ if __name__ == '__main__':
        LIMIT 2
        """
 
+    feature_names = [
+        'Elevation', 
+        'Aspect',
+        'Slope',
+        'Horizontal_Distance_To_Hydrology',
+        'Vertical_Distance_To_Hydrology',
+        'Horizontal_Distance_To_Roadways',
+        'Hillshade_9am',
+        'Hillshade_Noon',
+        'Hillshade_3pm',
+        'Horizontal_Distance_To_Fire_Points',
+        'Wilderness_Area',
+        'Soil_Type'
+    ]
     with beam.Pipeline(options=pipeline_options) as p:
-        stats = ( p
+        examples = ( p
             | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample())
+            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample(feature_names)))
  #           | 'BeamExamplesToArrowTables' >> batch_util.BatchExamplesToArrowTables()
  #           | 'GenerateStatistics' >> tfdv.GenerateStatistics())
+                    
+        _ = (examples
             | 'WriteOutputTest' >> beam.io.textio.WriteToText(
                                            file_path_prefix=anomalies_output_path,
                                            shard_name_template='',

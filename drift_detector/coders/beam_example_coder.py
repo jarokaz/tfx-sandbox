@@ -85,7 +85,7 @@ class InstanceToBeamExample(beam.DoFn):
         raise TypeError("The provided feature list does not match the length of an instance.")
                 
       for instance in raw_data[_INSTANCES_KEY]:
-        yield {name: np.array(value) 
+        yield {name: np.array([value])
           for name, value in zip(self._feature_names, instance)}
             
     else:

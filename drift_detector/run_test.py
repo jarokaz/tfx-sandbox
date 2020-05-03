@@ -125,9 +125,11 @@ if __name__ == '__main__':
     with beam.Pipeline(options=pipeline_options) as p:
         examples = ( p
             | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample(feature_names)))
- #           | 'BeamExamplesToArrowTables' >> batch_util.BatchExamplesToArrowTables()
- #           | 'GenerateStatistics' >> tfdv.GenerateStatistics())
+            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample(feature_names))
+            | 'BeamExamplesToArrow' >> batch_util.BatchExamplesToArrowTables())
+ #       
+        stats = (examples
+            | 'GenerateStatistics' >> tfdv.GenerateStatistics())
                     
         _ = (examples
             | 'WriteOutputTest' >> beam.io.textio.WriteToText(
@@ -136,12 +138,12 @@ if __name__ == '__main__':
                                            append_trailing_newlines=True))
         
         
- #       _ = (stats       
- #           | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
- #                 file_path_prefix=stats_output_path,
- #                 shard_name_template='',
- #                 coder=beam.coders.ProtoCoder(
- #                     statistics_pb2.DatasetFeatureStatisticsList)))
+        _ = (stats       
+            | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(
+                  file_path_prefix=stats_output_path,
+                  shard_name_template='',
+                  coder=beam.coders.ProtoCoder(
+                      statistics_pb2.DatasetFeatureStatisticsList)))
    
        # _ = (stats
             #| 'ValidateStatistics' >> beam.Map(tfdv.validate_statistics, schema=schema)

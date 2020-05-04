@@ -55,7 +55,7 @@ from tensorflow_data_validation.statistics import stats_options
 from tensorflow_data_validation.utils import io_util
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
-from utils.gen_stats import generate_statistics_from_bq
+from utils.drift_reports import generate_drift_reports
 
 
 if __name__ == '__main__':
@@ -70,20 +70,46 @@ if __name__ == '__main__':
     
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        '--request_response_log_table',
+        dest='request_response_log_table',
+        required=True,
+        help='Full name of AI Platform Prediction request-response log table')
+    parser.add_argument(
+        '--feature_names',
+        dest='feature_names',
+        required=False,
+        help='A list of feature names for instances in the log')
+    parser.add_argument(
+        '--start_time',
+        dest='start_time',
+        required=True,
+        help='The beginning of a time window')
+    parser.add_argument(
+        '--end_time',
+        dest='end_time',
+        required=True,
+        help='The end of a time window')
+    parser.add_argument(
         '--output_path',
         dest='output_path',
+        required=True,
         help='Output path',
         default = 'gs://hostedkfp-default-36un4wco1q/tfdv')
     parser.add_argument(
         '--dataflow_gcs_location',
         dest='dataflow_gcs_location',
-        help='A GCS root for Dataflow staging and temp locations.',
-        default = 'gs://hostedkfp-default-36un4wco1q/dataflow')
+        required=True,
+        help='A GCS root for Dataflow staging and temp locations')
     parser.add_argument(
         '--schema_file',
         dest='schema_file',
         help='A path to a schema file',
-        default = 'schema.pbtxt')
+        required=True)
+    parser.add_argument(
+        '--baseline_stats_file',
+        dest='baseline_stats_file',
+        help='A path to a baseline statistics file',
+        required=False)
 
     known_args, pipeline_args = parser.parse_known_args()
     
@@ -93,16 +119,22 @@ if __name__ == '__main__':
     
     stats_options = stats_options.StatsOptions()
     schema = tfdv.load_schema_text(known_args.schema_file)
+    baseline_stats = None
     
-    query = """
-       SELECT *
-       FROM 
-           `mlops-dev-env.covertype_dataset.covertype` 
-       """
+    start_time = known_args.start_time
+    end_time = known_args.end_time
+    feature_names = known_args.feature_names
+    if feature_names:
+        feature_names = known_args.feature_names.split(',')
+        
     
-    _ = generate_statistics_from_bq(
-            query,
+    _ = generate_drift_reports(
+            request_response_log_table=known_args.request_response_log_table,
+            feature_names=feature_names,
+            start_time=start_time,
+            end_time=end_time,
             output_path=known_args.output_path,
             schema=schema, 
+            baseline_stats=baseline_stats,
             stats_options=stats_options,
             pipeline_options=pipeline_options)

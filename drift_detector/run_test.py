@@ -98,7 +98,6 @@ if __name__ == '__main__':
        SELECT *
        FROM 
            `mlops-dev-env.data_validation.sklearn_covertype_classifier_logs` 
-       LIMIT 2
        """
     
     query1 = """

@@ -42,8 +42,10 @@ _LOGGING_TABLE_SCHEMA = {
 
 LOG_RECORD = Dict
 
-#@beam.typehints.with_input_types(LOG_RECORD)
-#@beam.typehints.with_output_types(types.BeamExample)
+
+
+@beam.typehints.with_input_types(LOG_RECORD)
+@beam.typehints.with_output_types(types.BeamExample)
 class InstanceToBeamExample(beam.DoFn):
   """A DoFn which converts a JSON string to types.BeamExample."""
 
@@ -52,13 +54,10 @@ class InstanceToBeamExample(beam.DoFn):
       constants.METRICS_NAMESPACE, "example_size")
     
     self._feature_names = feature_names
-    print("in constructor: %s" % self._feature_names)
       
 
-  def process(self, log_record: LOG_RECORD): #-> Iterable[types.BeamExample]:
-    #if bq_record:
-    #  self._example_size.inc(sum(map(len, batch)))
-    
+  def process(self, log_record: LOG_RECORD):
+ 
     incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
     if bool(incorrect_features):
       raise TypeError("Received log record with incorrect features %s" %

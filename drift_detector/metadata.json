@@ -3,14 +3,6 @@
   "description": "Data drift detector Python flex template.",
   "parameters": [
     {
-      "name": "project",
-      "label": "Project ID.",
-      "helpText": "Project ID",
-      "regexes": [
-        "[-a-zA-Z0-9]+"
-      ]
-    },
-    {
       "name": "request_response_log_table",
       "label": "Request response log table.",
       "helpText": "A full name of the BQ request-response log table",
@@ -52,11 +44,11 @@
       ]
     },
     {
-      "name": "dataflow_gcs_location",
-      "label": "Dataflow GCS location.",
-      "helpText": "A GCS root for Dataflow staging and temp locations.",
+      "name": "setup_file",
+      "label": "Setup file.",
+      "helpText": "Setup file.",
       "regexes": [
-        "gs://[-_./a-zA-Z0-9]+"
+        "[-_./a-zA-Z0-9]+"
       ]
     },
     {

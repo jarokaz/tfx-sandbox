@@ -8,6 +8,6 @@ setup(
     version='0.1',
     packages=find_packages(),
     install_requires=[
-      'tfx==0.21.4'
+      'tensorflow-data-validation'
     ]
 )

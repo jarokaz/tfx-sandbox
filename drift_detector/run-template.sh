@@ -21,15 +21,15 @@ BASELINE_STATS_FILE=gs://hostedkfp-default-36un4wco1q/tfdv/baseline_stats/stats.
 
 PROJECT_ID=mlops-dev-env
 TEMPLATE_PATH=gs://mlops-dev-workspace/dataflow_templates/drift_detector/drift_detector.json
+SETUP_FILE=./setup.py
 
 gcloud beta dataflow flex-template run "data-drift-`date +%Y%m%d-%H%M%S`" \
 --template-file-gcs-location "$TEMPLATE_PATH" \
 --parameters \
-"^;^project=$PROJECT_ID;\
+"^;^setup_file=$SETUP_FILE;\
 request_response_log_table=$REQUEST_RESPONSE_LOG_TABLE;\
 feature_names=$FEATURE_NAMES;\
 start_time=$START_TIME;\
 end_time=$END_TIME;\
 output_path=$OUTPUT_PATH;\
-dataflow_gcs_location=$DATAFLOW_GCS_LOCATION;\
 schema_file=$SCHEMA_FILE"

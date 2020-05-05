@@ -20,12 +20,17 @@ SCHEMA_FILE='gs://hostedkfp-default-36un4wco1q/tfdv/schema/schema.pbtxt'
 BASELINE_STATS_FILE='gs://hostedkfp-default-36un4wco1q/tfdv/baseline_stats/stats.pb'
 
 PROJECT_ID=mlops-dev-env
+RUNNER=DataflowRunner
+SETUP_FILE=./setup.py
 
 python run.py --project $PROJECT_ID \
+--runner $RUNNER \
+--setup_file $SETUP_FILE \
+--temp_location $DATAFLOW_GCS_LOCATION/temp \
+--staging_location $DATAFLOW_GCS_LOCATION/staging \
 --request_response_log_table $REQUEST_RESPONSE_LOG_TABLE \
 --feature_names $FEATURE_NAMES \
 --start_time $START_TIME \
 --end_time $END_TIME \
 --output_path $OUTPUT_PATH \
---dataflow_gcs_location $DATAFLOW_GCS_LOCATION \
 --schema_file $SCHEMA_FILE

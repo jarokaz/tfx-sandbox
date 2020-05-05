@@ -15,20 +15,7 @@
 # limitations under the License.
 #
 
-"""An example that calculates statistics from BQ query.
-To execute this pipeline locally, specify a local output file or output prefix
-on GCS::
-  --output [YOUR_LOCAL_FILE | gs://YOUR_OUTPUT_PREFIX]
-To execute this pipeline using the Google Cloud Dataflow service, specify
-pipeline configuration::
-  --project YOUR_PROJECT_ID
-  --staging_location gs://YOUR_STAGING_DIRECTORY
-  --temp_location gs://YOUR_TEMP_DIRECTORY
-  --job_name YOUR_JOB_NAME
-  --runner DataflowRunner
-and an output prefix on GCS::
-  --output gs://YOUR_OUTPUT_PREFIX
-"""
+"""Runs a data drift job."""
 
 # pytype: skip-file
 
@@ -127,7 +114,6 @@ if __name__ == '__main__':
     if feature_names:
         feature_names = known_args.feature_names.split(',')
         
-    
     _ = generate_drift_reports(
             request_response_log_table=known_args.request_response_log_table,
             feature_names=feature_names,

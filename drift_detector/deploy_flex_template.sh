@@ -44,7 +44,7 @@ gcloud config set project $_PROJECT_ID
 
 # Build drift-detector image
 export TEMPLATE_IMAGE="gcr.io/$_PROJECT_ID/drift-detector:latest"
-#gcloud builds submit --tag "$TEMPLATE_IMAGE" .
+gcloud builds submit --tag "$TEMPLATE_IMAGE" .
 
 # Deploy the template
 export TEMPLATE_PATH="$_TEMPLATE_LOCATION/drift_detector.json"

@@ -1,4 +1,4 @@
 apache-beam[gcp]==2.20.0
-tensorflow-data-validation==0.21.5
+tensorflow-data-validation
 jinja2
 

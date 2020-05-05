@@ -20,10 +20,11 @@ WORKDIR ${WORKDIR}
 
 COPY requirements.txt .
 COPY run.py .
+COPY setup.py .
 COPY coders/*.py coders/
 COPY utils/*.py utils/
 
-ENV FLEX_TEMPLATE_PYTHON_REQUIREMENTS_FILE="${WORKDIR}/requirements.txt"
+#ENV FLEX_TEMPLATE_PYTHON_REQUIREMENTS_FILE="${WORKDIR}/requirements.txt"
 ENV FLEX_TEMPLATE_PYTHON_PY_FILE="${WORKDIR}/run.py"
 
 RUN pip install -U -r ./requirements.txt

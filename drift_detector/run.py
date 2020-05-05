@@ -80,13 +80,7 @@ if __name__ == '__main__':
         '--output_path',
         dest='output_path',
         required=True,
-        help='Output path',
-        default = 'gs://hostedkfp-default-36un4wco1q/tfdv')
-    parser.add_argument(
-        '--dataflow_gcs_location',
-        dest='dataflow_gcs_location',
-        required=True,
-        help='A GCS root for Dataflow staging and temp locations')
+        help='Output path')
     parser.add_argument(
         '--schema_file',
         dest='schema_file',
@@ -100,13 +94,14 @@ if __name__ == '__main__':
 
     known_args, pipeline_args = parser.parse_known_args()
     
-    pipeline_options = PipelineOptions(pipeline_args)
-    pipeline_options.view_as(GoogleCloudOptions).staging_location = '%s/staging' % known_args.dataflow_gcs_location
-    pipeline_options.view_as(GoogleCloudOptions).temp_location = '%s/temp' % known_args.dataflow_gcs_location
-    
+    pipeline_options = PipelineOptions(pipeline_args)   
     stats_options = stats_options.StatsOptions()
     schema = tfdv.load_schema_text(known_args.schema_file)
-    baseline_stats = None
+    
+    if known_args.baseline_stats_file:
+        baseline_stats = tfdv.load_statistics(known_args.baseline_stats_file)
+    else:
+        baseline_stats = None
     
     start_time = known_args.start_time
     end_time = known_args.end_time

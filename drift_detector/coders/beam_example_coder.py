@@ -42,6 +42,22 @@ _LOGGING_TABLE_SCHEMA = {
 
 LOG_RECORD = Dict
 
+
+_validate_request_response_log_schema(log_record: LOG_RECORD):
+    """Validates that log record conforms to schema."""
+    
+    incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
+    if bool(incorrect_features):
+      raise TypeError("Received log record with incorrect features %s" %
+                       features_columns)
+       
+    features_with_wrong_type = [key for key, value in log_record.items() 
+                                if not _LOGGING_TABLE_SCHEMA[key](value)]
+    if not bool(features_with_wrong_type):
+      raise TypeError("Received log record with incorrect feature types %s" %
+                       features_with_wrong_type)
+    
+    
 @beam.typehints.with_input_types(LOG_RECORD)
 @beam.typehints.with_output_types(types.BeamExample)
 class JSONObjectCoder(beam.DoFn):
@@ -54,18 +70,9 @@ class JSONObjectCoder(beam.DoFn):
       
 
   def process(self, log_record: LOG_RECORD):
- 
-    incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
-    if bool(incorrect_features):
-      raise TypeError("Received log record with incorrect features %s" %
-                       features_columns)
-       
-    features_with_wrong_type = [key for key, value in log_record.items() 
-                                if not _LOGGING_TABLE_SCHEMA[key](value)]
-    if not bool(features_with_wrong_type):
-      raise TypeError("Received log record with incorrect feature types %s" %
-                       features_with_wrong_type)
     
+    _validate_request_response_log_schema(log_record)
+ 
     raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
     if not type(raw_data[_INSTANCES_KEY][0]) is dict:
         raise TypeError("Expected instances in a JSON object format.")
@@ -91,17 +98,8 @@ class SimpleListCoder(beam.DoFn):
       
 
   def process(self, log_record: LOG_RECORD):
- 
-    incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
-    if bool(incorrect_features):
-      raise TypeError("Received log record with incorrect features %s" %
-                       features_columns)
-       
-    features_with_wrong_type = [key for key, value in log_record.items() 
-                                if not _LOGGING_TABLE_SCHEMA[key](value)]
-    if not bool(features_with_wrong_type):
-      raise TypeError("Received log record with incorrect feature types %s" %
-                       features_with_wrong_type)
+    
+    _validate_request_response_log_schema(log_record)
             
     if not type(raw_data[_INSTANCES_KEY][0]) is list:
         raise TypeError("Expected instances in a simple list format.")

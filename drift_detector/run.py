@@ -63,6 +63,11 @@ if __name__ == '__main__':
         required=True,
         help='Full name of AI Platform Prediction request-response log table')
     parser.add_argument(
+        '--instance_type',
+        dest='instance_type',
+        required=True,
+        help='The type of instances logged in the request_response_table: LIST | OBJECT')
+    parser.add_argument(
         '--feature_names',
         dest='feature_names',
         required=False,
@@ -95,22 +100,28 @@ if __name__ == '__main__':
 
     known_args, pipeline_args = parser.parse_known_args()
     
-    pipeline_options = PipelineOptions(pipeline_args)   
-    stats_options = stats_options.StatsOptions()
-    schema = tfdv.load_schema_text(known_args.schema_file)
+    if known_args.instance_type == 'LIST':
+        instance_type = InstanceType.LIST
+        if not known_args.feature_names:
+            raise TypeError("The feature list must be provided for LIST instance_type")
+        feature_names = known_args.feature_names.split(',')
+    elif known_args.instance_type == 'OBJECT':
+        instance_type = InstanceType.JSON_OBJECT
+    else:
+        raise TypeError("The instance_type parameter must be LIST or OBJECT")
     
     if known_args.baseline_stats_file:
         baseline_stats = tfdv.load_statistics(known_args.baseline_stats_file)
     else:
         baseline_stats = None
-    
+        
     start_time = known_args.start_time
     end_time = known_args.end_time
-    feature_names = known_args.feature_names
-    if feature_names:
-        feature_names = known_args.feature_names.split(',')
-        
-    instance_type = InstanceType.JSON_OBJECT
+    
+    stats_options = stats_options.StatsOptions()
+    schema = tfdv.load_schema_text(known_args.schema_file)
+    
+    pipeline_options = PipelineOptions(pipeline_args)   
         
     _ = generate_drift_reports(
             request_response_log_table=known_args.request_response_log_table,

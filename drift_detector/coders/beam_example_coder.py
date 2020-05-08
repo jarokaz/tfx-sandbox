@@ -42,12 +42,46 @@ _LOGGING_TABLE_SCHEMA = {
 
 LOG_RECORD = Dict
 
+@beam.typehints.with_input_types(LOG_RECORD)
+@beam.typehints.with_output_types(types.BeamExample)
+class JSONObjectCoder(beam.DoFn):
+  """A DoFn which converts an AI Platform Prediction input with instances in 
+  a JSON object format to types.BeamExample elements."""
 
+  def __init__(self):
+    self._example_size = beam.metrics.Metrics.counter(
+      constants.METRICS_NAMESPACE, "example_size")
+      
+
+  def process(self, log_record: LOG_RECORD):
+ 
+    incorrect_features = set(log_record.keys()) - set(_LOGGING_TABLE_SCHEMA.keys())
+    if bool(incorrect_features):
+      raise TypeError("Received log record with incorrect features %s" %
+                       features_columns)
+       
+    features_with_wrong_type = [key for key, value in log_record.items() 
+                                if not _LOGGING_TABLE_SCHEMA[key](value)]
+    if not bool(features_with_wrong_type):
+      raise TypeError("Received log record with incorrect feature types %s" %
+                       features_with_wrong_type)
+    
+    raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
+    if not type(raw_data[_INSTANCES_KEY][0]) is dict:
+        raise TypeError("Expected instances in a JSON object format.")
+        
+    for instance in raw_data[_INSTANCES_KEY]:
+        for key, value in instance.items():
+            instance[key] = np.array(value)
+        yield instance
+            
+      
 
 @beam.typehints.with_input_types(LOG_RECORD)
 @beam.typehints.with_output_types(types.BeamExample)
-class InstanceToBeamExample(beam.DoFn):
-  """A DoFn which converts a JSON string to types.BeamExample."""
+class SimpleListCoder(beam.DoFn):
+  """A DoFn which converts an AI Platform Prediction input with instances in 
+  a simple list format to types.BeamExample elements."""
 
   def __init__(self, feature_names=None):
     self._example_size = beam.metrics.Metrics.counter(
@@ -68,28 +102,21 @@ class InstanceToBeamExample(beam.DoFn):
     if not bool(features_with_wrong_type):
       raise TypeError("Received log record with incorrect feature types %s" %
                        features_with_wrong_type)
-    
-    raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
-    if type(raw_data[_INSTANCES_KEY][0]) is dict:
-      for instance in raw_data[_INSTANCES_KEY]:
-        for key, value in instance.items():
-          instance[key] = np.array(value)
-        yield instance
             
-    elif type(raw_data[_INSTANCES_KEY][0]) is list:
-      if not self._feature_names:
+    if not type(raw_data[_INSTANCES_KEY][0]) is list:
+        raise TypeError("Expected instances in a simple list format.")
+        
+    if not self._feature_names:
         raise TypeError("Feature names are required for instances in a simple list format.")
     
-      if len(self._feature_names) != len(raw_data[_INSTANCES_KEY][0]):
+    if len(self._feature_names) != len(raw_data[_INSTANCES_KEY][0]):
         raise TypeError("The provided feature list does not match the length of an instance.")
                 
-      for instance in raw_data[_INSTANCES_KEY]:
+    for instance in raw_data[_INSTANCES_KEY]:
         yield {name: np.array([value])
-          for name, value in zip(self._feature_names, instance)}
+            for name, value in zip(self._feature_names, instance)}
             
-    else:
-      raise TypeError("Unsupported instance type.")
-      
+
     
     
 

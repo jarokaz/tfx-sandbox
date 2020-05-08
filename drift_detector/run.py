@@ -43,6 +43,7 @@ from tensorflow_data_validation.utils import io_util
 from tensorflow_metadata.proto.v0 import statistics_pb2
 
 from utils.drift_reports import generate_drift_reports
+from utils.drift_reports import InstanceType
 
 
 if __name__ == '__main__':
@@ -109,8 +110,11 @@ if __name__ == '__main__':
     if feature_names:
         feature_names = known_args.feature_names.split(',')
         
+    instance_type = InstanceType.JSON_OBJECT
+        
     _ = generate_drift_reports(
             request_response_log_table=known_args.request_response_log_table,
+            instance_type=instance_type,
             feature_names=feature_names,
             start_time=start_time,
             end_time=end_time,

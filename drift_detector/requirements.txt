@@ -1,4 +1,0 @@
-apache-beam[gcp]==2.20.0
-tensorflow-data-validation
-jinja2
-

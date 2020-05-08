@@ -21,6 +21,7 @@ in AI Platform Prediction request-response log.
 import datetime
 import os
 import logging
+from enum import Enum
 from typing import List, Optional, Text, Union, Dict, Iterable
 
 import apache_beam as beam
@@ -35,7 +36,8 @@ from tensorflow_data_validation.utils import batch_util
 from tensorflow_metadata.proto.v0 import statistics_pb2
 from tensorflow_metadata.proto.v0 import schema_pb2
 
-from coders.beam_example_coder import InstanceToBeamExample
+from coders.beam_example_coder import JSONObjectCoder
+from coders.beam_example_coder import SimpleListCoder
 
 _STATS_FILENAME='stats.pb'
 _ANOMALIES_FILENAME='anomalies.pbtxt'
@@ -59,8 +61,13 @@ def _generate_query(table_name, start_time, end_time):
   return query
 
 
+class InstanceType(Enum):
+    SIMPLE_LIST = 1
+    JSON_OBJECT = 2
+
 def generate_drift_reports(
         request_response_log_table: str,
+        instance_type: InstanceType,    
         feature_names: List[str],
         start_time: datetime.datetime,
         end_time: datetime.datetime,
@@ -76,8 +83,11 @@ def generate_drift_reports(
     Args:
       request_response_log_table: A full name of a BigQuery table
         with the request_response_log
-      feature_names: A list of feature names. It is required when the instances
-        in the log are in a simple list format.
+      instance_type: The type of instances logged in the request_response_log_table.
+        Currently, the only supported instance types are: a simple list (InstanceType.SIMPLE_LIST)
+        and a JSON object (InstanceType(JSON_OBJECT))
+      feature_names: A list of feature names. Must be provided if the instance_type is
+        InstanceType(SIMPLE_LIST)
       start_time: The beginning of a time window.
       end_time: The end of a time window.
       output_path: The GCS location to output the statistics and anomalies
@@ -96,11 +106,22 @@ def generate_drift_reports(
     anomalies_output_path = os.path.join(output_path, _ANOMALIES_FILENAME)
     
     with beam.Pipeline(options=pipeline_options) as p:
-        stats = ( p
-            | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True))
-            | 'InstancesToBeamExamples' >> beam.ParDo(InstanceToBeamExample(feature_names))
-            | 'BeamExamplesToArrow' >> batch_util.BatchExamplesToArrowTables()
-            | 'GenerateStatistics' >> tfdv.GenerateStatistics(stats_options))
+        raw_examples = ( p
+                   | 'GetData' >> beam.io.Read(beam.io.BigQuerySource(query=query, use_standard_sql=True)))
+        
+        if instance_type == InstanceType.SIMPLE_LIST:
+            examples = (raw_examples
+                       | 'SimpleInstancesToBeamExamples' >> beam.ParDo(SimpleListCoder(feature_names)))
+        elif instance_type == InstanceType.JSON_OBJECT:
+            examples = (raw_examples
+                       | 'JSONObjectInstancesToBeamExamples' >> beam.ParDo(JSONObjectCoder()))  
+        else:
+            raise TypeError("Unsupported instance type")
+            
+        stats = (examples
+                | 'BeamExamplesToArrow' >> batch_util.BatchExamplesToArrowTables()
+                | 'GenerateStatistics' >> tfdv.GenerateStatistics(stats_options)
+                )
         
         _ = (stats       
             | 'WriteStatsOutput' >> beam.io.WriteToTFRecord(

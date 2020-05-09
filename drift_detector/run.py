@@ -101,7 +101,7 @@ if __name__ == '__main__':
     known_args, pipeline_args = parser.parse_known_args()
     
     if known_args.instance_type == 'LIST':
-        instance_type = InstanceType.LIST
+        instance_type = InstanceType.SIMPLE_LIST
         if not known_args.feature_names:
             raise TypeError("The feature list must be provided for LIST instance_type")
         feature_names = known_args.feature_names.split(',')

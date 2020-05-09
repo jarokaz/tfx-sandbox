@@ -1,4 +1,4 @@
-REQUEST_RESPONSE_LOG_TABLE=mlops-dev-env.data_validation.sklearn_covertype_classifier_logs
+REQUEST_RESPONSE_LOG_TABLE=mlops-dev-env.data_validation.covertype_classifier_logs_sklearn
 FEATURE_NAMES=\
 Elevation,\
 Aspect,\
@@ -12,9 +12,9 @@ Hillshade_3pm,\
 Horizontal_Distance_To_Fire_Points,\
 Wilderness_Area,\
 Soil_Type
-START_TIME=2020-05-09T5:05:14
-END_TIME=2020-05-09T18:05:14
-OUTPUT_PATH=gs://mlops-dev-workspace/drift_monitor/output
+START_TIME=2020-05-09T19:00:26
+END_TIME=2020-05-09T19:04:24
+OUTPUT_PATH=gs://mlops-dev-workspace/drift_monitor/output/sklearn
 DATAFLOW_GCS_LOCATION=gs://mlops-dev-workspace/drift_monitor/dataflow
 SCHEMA_FILE=gs://mlops-dev-workspace/drift_monitor/schema/schema.pbtxt
 BASELINE_STATS_FILE=gs://mlops-dev-workspace/drift_monitor/baseline_stats/stats.pb
@@ -30,7 +30,7 @@ python run.py --project $PROJECT_ID \
 --setup_file $SETUP_FILE \
 --request_response_log_table $REQUEST_RESPONSE_LOG_TABLE \
 --instance_type $INSTANCE_TYPE \
---feature_list $FEATURE_NAMES \
+--feature_names $FEATURE_NAMES \
 --start_time $START_TIME \
 --end_time $END_TIME \
 --output_path $OUTPUT_PATH \

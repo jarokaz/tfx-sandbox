@@ -14,7 +14,7 @@ Wilderness_Area,\
 Soil_Type
 START_TIME=2020-05-09T5:05:14
 END_TIME=2020-05-09T18:05:14
-OUTPUT_PATH=gs://mlops-dev-workspace/drift_monitor/output
+OUTPUT_PATH=gs://mlops-dev-workspace/drift_monitor/output/tf
 DATAFLOW_GCS_LOCATION=gs://mlops-dev-workspace/drift_monitor/dataflow
 SCHEMA_FILE=gs://mlops-dev-workspace/drift_monitor/schema/schema.pbtxt
 BASELINE_STATS_FILE=gs://mlops-dev-workspace/drift_monitor/baseline_stats/stats.pb

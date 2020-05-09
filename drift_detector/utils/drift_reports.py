@@ -52,7 +52,6 @@ def _generate_query(table_name, start_time, end_time):
        FROM 
            `{{ source_table }}` AS cover
        WHERE time BETWEEN '{{ start_time }}' AND '{{ end_time }}'
-       LIMIT 100
        """
   
   query = Template(sampling_query_template).render(

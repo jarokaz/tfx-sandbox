@@ -101,6 +101,7 @@ class SimpleListCoder(beam.DoFn):
     
     _validate_request_response_log_schema(log_record)
             
+    raw_data = json.loads(log_record[_RAW_DATA_COLUMN])
     if not type(raw_data[_INSTANCES_KEY][0]) is list:
         raise TypeError("Expected instances in a simple list format.")
         

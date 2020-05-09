@@ -1,4 +1,4 @@
-REQUEST_RESPONSE_LOG_TABLE=mlops-dev-env.data_validation.sklearn_covertype_classifier_logs
+REQUEST_RESPONSE_LOG_TABLE=mlops-dev-env.data_validation.covertype_classifier_logs_tf
 FEATURE_NAMES=\
 Elevation,\
 Aspect,\
@@ -12,16 +12,16 @@ Hillshade_3pm,\
 Horizontal_Distance_To_Fire_Points,\
 Wilderness_Area,\
 Soil_Type
-START_TIME=2020-05-01T20:00:27
-END_TIME=2020-05-01T20:01:39
-OUTPUT_PATH='gs://hostedkfp-default-36un4wco1q/tfdv/output'
-DATAFLOW_GCS_LOCATION='gs://hostedkfp-default-36un4wco1q/tfdv/dataflow'
-SCHEMA_FILE='gs://hostedkfp-default-36un4wco1q/tfdv/schema/schema.pbtxt'
-BASELINE_STATS_FILE='gs://hostedkfp-default-36un4wco1q/tfdv/baseline_stats/stats.pb'
+START_TIME=2020-05-09T5:05:14
+END_TIME=2020-05-09T18:05:14
+OUTPUT_PATH=gs://mlops-dev-workspace/drift_monitor/output
+DATAFLOW_GCS_LOCATION=gs://mlops-dev-workspace/drift_monitor/dataflow
+SCHEMA_FILE=gs://mlops-dev-workspace/drift_monitor/schema/schema.pbtxt
+BASELINE_STATS_FILE=gs://mlops-dev-workspace/drift_monitor/baseline_stats/stats.pb
 INSTANCE_TYPE=OBJECT
 
 PROJECT_ID=mlops-dev-env
-RUNNER=DataflowRunner
+RUNNER=DirectRunner
 SETUP_FILE=./setup.py
 
 python run.py --project $PROJECT_ID \

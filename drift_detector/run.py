@@ -107,6 +107,7 @@ if __name__ == '__main__':
         feature_names = known_args.feature_names.split(',')
     elif known_args.instance_type == 'OBJECT':
         instance_type = InstanceType.JSON_OBJECT
+        feature_names = None
     else:
         raise TypeError("The instance_type parameter must be LIST or OBJECT")
     

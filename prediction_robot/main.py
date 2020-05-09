@@ -67,7 +67,7 @@ def _call_caip_predict(service_name, signature_name, model_output_key, instances
 
   return response['predictions']
     
-def hello_pubsub(event, context):
+def run_predictions(event, context):
     """Background Cloud Function to be triggered by Pub/Sub.
     Args:
          event (dict):  The dictionary with data specific to this type of
@@ -91,5 +91,6 @@ def hello_pubsub(event, context):
         instances)
         
     print(predictions)
+    return predictions
     
     

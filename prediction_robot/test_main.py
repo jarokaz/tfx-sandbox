@@ -13,7 +13,7 @@ mock_context.timestamp = '2019-07-15T22:09:03.761Z'
 def test_print_table(capsys):
     params = {
         'table': 'covertype_dataset.covertype',
-        'num_rows': 10,
+        'num_rows': 3,
         'service_name': 'projects/mlops-dev-env/models/covertype_classifier_tf/versions/v2',
         'signature_name': 'serving_default',
         'model_output_key': 'probabilities'

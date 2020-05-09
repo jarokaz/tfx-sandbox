@@ -21,11 +21,13 @@ BASELINE_STATS_FILE=gs://mlops-dev-workspace/drift_monitor/baseline_stats/stats.
 INSTANCE_TYPE=OBJECT
 
 PROJECT_ID=mlops-dev-env
-RUNNER=DirectRunner
+RUNNER=DataflowRunner
 SETUP_FILE=./setup.py
 
 python run.py --project $PROJECT_ID \
 --runner $RUNNER \
+--staging_location $DATAFLOW_GCS_LOCATION/staging \
+--temp_location $DATAFLOW_GCS_LOCATION/temp \
 --setup_file $SETUP_FILE \
 --request_response_log_table $REQUEST_RESPONSE_LOG_TABLE \
 --instance_type $INSTANCE_TYPE \
@@ -34,5 +36,3 @@ python run.py --project $PROJECT_ID \
 --output_path $OUTPUT_PATH \
 --schema_file $SCHEMA_FILE
 
-#--staging_location $DATAFLOW_GCS_LOCATION/staging \
-#--temp_location $DATAFLOW_GCS_LOCATION/temp \

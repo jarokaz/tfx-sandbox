@@ -18,33 +18,18 @@ import json
 import os
 
 import googleapiclient.discovery
-
-from jinja2 import Template
-from google.cloud import bigquery
+import pandas as pd
 
 
+def _sample_instances(data_file, num_rows):
+    """Samples instance from a CSV file."""
 
-def _sample_instances(source_table_name, num_rows):
-    """Samples instance from BQ table."""
-
-    sampling_query_template = """
-        SELECT *
-        FROM 
-           `{{ source_table }}` AS cover
-        WHERE 
-        MOD(ABS(FARM_FINGERPRINT(TO_JSON_STRING(cover))), 100) IN (1)
-        LIMIT {{ num_rows }}
-        """
-    query = Template(sampling_query_template).render(
-        source_table=source_table_name, num_rows=num_rows)
-
-    client = bigquery.Client(location="US")
-    query_job = client.query(query)
+    df = pd.read_csv(data_file).sample(frac=1).drop('Cover_Type', axis=1)
+    
     instances = []
-    for row in query_job:
-        instances.append(
-            {key: [value] for key, value in row.items()
-             if key != 'Cover_Type'})
+    for row in df.head(num_rows).iterrows():
+        feature_dict = {key: [value] for key, value in row[1].to_dict().items()}
+        instances.append(feature_dict)
 
     return instances
 
@@ -65,7 +50,7 @@ def _call_caip_predict(service_name, signature_name, model_output_key, instances
   if 'error' in response:
     raise RuntimeError(response['error'])
 
-  return response['predictions']
+  return [output[model_output_key] for output in response['predictions']]
     
 def run_predictions(event, context):
     """Background Cloud Function to be triggered by Pub/Sub.
@@ -81,8 +66,8 @@ def run_predictions(event, context):
     json_str = base64.b64decode(event['data']).decode('utf-8')
     params = json.loads(json_str)
     instances = _sample_instances(
-        params['table'], 
-        params['num_rows'])
+        params['data_file'], 
+        params['num_examples'])
      
     predictions = _call_caip_predict(
         params['service_name'], 
@@ -90,7 +75,6 @@ def run_predictions(event, context):
         params['model_output_key'], 
         instances)
         
-    print(predictions)
     return predictions
     
     

@@ -3,8 +3,8 @@ from setuptools import setup
 
 
 setup(
-    name='tfdv',
-    description='TFDV Runtime.',
+    name='drift_analyzer',
+    description='Data drift analyzer.',
     version='0.1',
     packages=find_packages(),
     install_requires=[

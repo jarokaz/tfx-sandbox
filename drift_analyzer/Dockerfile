@@ -18,12 +18,12 @@ ARG WORKDIR=/dataflow/template
 RUN mkdir -p ${WORKDIR}
 WORKDIR ${WORKDIR}
 
-COPY drift_detector/run.py .
-COPY drift_detector/setup.py .
-COPY drift_detector/coders/*.py coders/
-COPY drift_detector/utils/*.py utils/
+COPY *.sh ./
+COPY *.py ./
+COPY coders/*.py coders/
+COPY utils/*.py utils/
 
 #ENV FLEX_TEMPLATE_PYTHON_REQUIREMENTS_FILE="${WORKDIR}/requirements.txt"
 ENV FLEX_TEMPLATE_PYTHON_PY_FILE="${WORKDIR}/run.py"
 
-RUN pip install -U  tensorflow_data_validation==0.21.5
+RUN pip install -U  tensorflow_data_validation==0.21.5 jinja2

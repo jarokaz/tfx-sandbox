@@ -90,7 +90,6 @@ class Executor(base_executor.BaseExecutor):
                                                   split)
         output_uri = '{}/{}'.format(output_uri,'tfrecords')
         
-        print("***********", output_uri)
         records = (p 
                 | 'TFXIORead[{}]'.format(split) >> beam.io.ReadFromTFRecord(input_uri))
         _ = (records

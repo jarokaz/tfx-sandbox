@@ -49,14 +49,6 @@ _beam_pipeline_args =  [
       '--region=' + _region,
   ]
 
-_beam_pipeline_args =  [
-      '--runner=DataflowRunner',
-      '--project=' + _project_id,
-      '--temp_location=' + _beam_tmp_folder,
-      '--region=' + _region,
-  ]
-
-
 
 # To run this pipeline from the python CLI:
 #   $python taxi_pipeline_hello.py

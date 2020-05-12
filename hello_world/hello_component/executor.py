@@ -85,7 +85,6 @@ class Executor(base_executor.BaseExecutor):
       for split, uri in split_uris:
         absl.logging.info('Copying split {}'.format(split))
         input_uri = io_utils.all_files_pattern(uri)
-        print('*****input_uri*****', input_uri)
         output_uri = artifact_utils.get_split_uri(output_dict['output_data'],
                                                   split)
         output_uri = '{}/{}'.format(output_uri,'tfrecords')

@@ -36,7 +36,8 @@ from tfx.components.base import base_executor
 from tfx.types import artifact_utils
 from tfx.utils import io_utils
 
-
+def print_row(element):
+  print(element)
 
 class Executor(base_executor.BaseExecutor):
   """Executor for HelloComponent."""
@@ -84,14 +85,23 @@ class Executor(base_executor.BaseExecutor):
       for split, uri in split_uris:
         absl.logging.info('Copying split {}'.format(split))
         input_uri = io_utils.all_files_pattern(uri)
+        print('*****input_uri*****', input_uri)
         output_uri = artifact_utils.get_split_uri(output_dict['output_data'],
                                                   split)
-        _ = (p 
-                | 'TFXIORead[{}]'.format(split) >> beam.io.ReadFromTFRecord(input_uri)
-                | 'TFXIOWrite[{}]'.format(split) >> beam.io.WriteToTFRecord(output_uri))
+        output_uri = '{}/{}'.format(output_uri,'tfrecords')
+        
+        print("***********", output_uri)
+        records = (p 
+                | 'TFXIORead[{}]'.format(split) >> beam.io.ReadFromTFRecord(input_uri))
+        _ = (records
+                | 'Count records[{}]'.format(split) >> beam.combiners.Count.Globally()
+                | 'Print result[{}]'.format(split) >> beam.Map(print_row))
+        _ = (records
+                | 'TFXIOWrite[{}]'.format(split) >> beam.io.WriteToTFRecord(
+                                                        output_uri))
         
         absl.logging.info('Split {} written to {}.'.format(
-            split, output_uri))
+           split, output_uri))
     
     
     

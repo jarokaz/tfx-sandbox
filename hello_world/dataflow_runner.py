@@ -27,11 +27,10 @@ from pipeline import create_pipeline
 
 
 _project_id = os.getenv("PROJECT_ID")
-_region = os.getenv("GCP_REGION", "us-central1")
+_region = os.getenv("GCP_REGION")
 _artifact_store_uri = os.getenv("ARTIFACT_STORE_URI")
 _tfx_image = os.getenv("KUBEFLOW_TFX_IMAGE")
 _pipeline_name = os.getenv("PIPELINE_NAME")
-_taxi_root = 'gs://mlops-dev-workspace/pipelines'
 _data_root = os.getenv("DATA_ROOT_URI")
 
 
@@ -41,6 +40,7 @@ _pipeline_root = '{}/{}/{}'.format(
       kfp.dsl.RUN_ID_PLACEHOLDER)
 
 _beam_tmp_folder = '{}/beam/tmp'.format(_artifact_store_uri)
+
 _beam_pipeline_args =  [
       '--runner=DataflowRunner',
       '--experiments=shuffle_mode=auto',
@@ -48,6 +48,15 @@ _beam_pipeline_args =  [
       '--temp_location=' + _beam_tmp_folder,
       '--region=' + _region,
   ]
+
+_beam_pipeline_args =  [
+      '--runner=DataflowRunner',
+      '--project=' + _project_id,
+      '--temp_location=' + _beam_tmp_folder,
+      '--region=' + _region,
+  ]
+
+
 
 # To run this pipeline from the python CLI:
 #   $python taxi_pipeline_hello.py

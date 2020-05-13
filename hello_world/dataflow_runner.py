@@ -43,7 +43,7 @@ _beam_tmp_folder = '{}/beam/tmp'.format(_artifact_store_uri)
 
 _beam_pipeline_args =  [
       '--runner=DataflowRunner',
-      '--experiments=shuffle_mode=auto',
+#      '--experiments=shuffle_mode=auto',
       '--project=' + _project_id,
       '--temp_location=' + _beam_tmp_folder,
       '--region=' + _region,
